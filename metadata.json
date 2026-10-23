@@ -1,0 +1,6 @@
+{
+  "name": "MamaCare+ Kenya",
+  "description": "AI-powered smart motherhood and infant monitoring system for first-time mothers in Kenya with KEPI immunization tracking, WHO growth charts, paper booklet hybrid verification, and bilingual Kiswahili/English health triage.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: mamacare-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-secureMCHPassword2026}
+      MONGO_INITDB_DATABASE: mamacare_kenya
+    volumes:
+      - mongo-data:/data/db
+      - ./server/scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mamacare-api
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-secureMCHPassword2026}@mongodb:27017/mamacare_kenya?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-mamaCareKenyaSecretJwt2026Prod}
+      AFRICASTALKING_USERNAME: ${AFRICASTALKING_USERNAME:-sandbox}
+      AFRICASTALKING_API_KEY: ${AFRICASTALKING_API_KEY}
+      AFRICASTALKING_SENDER_ID: ${AFRICASTALKING_SENDER_ID:-MAMACARE}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      AI_SERVICE_URL: http://ai-service:8000
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./backups:/app/backups
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: mamacare-ai-service
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      PYTHONUNBUFFERED: 1
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      EMERGENCY_SMS_WEBHOOK: http://api-server:3000/api/emergency/trigger
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  mongo-data:
+    driver: local
